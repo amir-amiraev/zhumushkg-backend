@@ -1,8 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as path from 'path';
 
-/** Обёртка для ESM-импорта в CommonJS проекте.
- *  new Function(...) непрозрачен для tsc → не превращается в require(). */
 const esmImport = new Function('pkg', 'return import(pkg)') as (
   pkg: string,
 ) => Promise<any>;
@@ -12,6 +10,7 @@ export class WhatsappService implements OnModuleInit {
   private readonly logger = new Logger(WhatsappService.name);
   private sock: any = null;
   private isReady = false;
+  private currentQr: string | null = null;
 
   async onModuleInit() {
     await this.connect();
@@ -19,7 +18,6 @@ export class WhatsappService implements OnModuleInit {
 
   private async connect() {
     const baileys = await esmImport('@whiskeysockets/baileys');
-    const { default: qrcode } = await esmImport('qrcode-terminal');
     const { Boom } = await esmImport('@hapi/boom');
 
     const makeWASocket = baileys.default ?? baileys.makeWASocket ?? baileys;
@@ -57,13 +55,13 @@ export class WhatsappService implements OnModuleInit {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        this.logger.warn('======= ОТСКАНИРУЙТЕ QR В WHATSAPP =======');
-        qrcode.generate(qr, { small: true });
-        this.logger.warn('===========================================');
+        this.currentQr = qr;
+        this.logger.warn('QR обновлён — откройте /whatsapp/qr в браузере');
       }
 
       if (connection === 'open') {
         this.isReady = true;
+        this.currentQr = null;
         this.logger.log('✅ WhatsApp подключён');
       }
 
@@ -84,6 +82,10 @@ export class WhatsappService implements OnModuleInit {
     });
 
     this.sock.ev.on('creds.update', saveCreds);
+  }
+
+  getQr(): string | null {
+    return this.currentQr;
   }
 
   isConnected(): boolean {
