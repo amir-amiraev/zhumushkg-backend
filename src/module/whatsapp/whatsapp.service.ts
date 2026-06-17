@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as path from 'path';
+import * as fs from 'fs';
 
 const esmImport = new Function('pkg', 'return import(pkg)') as (
   pkg: string,
@@ -69,15 +70,25 @@ export class WhatsappService implements OnModuleInit {
         this.isReady = false;
         const statusCode = (lastDisconnect?.error as InstanceType<typeof Boom>)
           ?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut;
 
         this.logger.warn(
-          `WhatsApp отключён (код ${statusCode}). Переподключение: ${shouldReconnect}`,
+          `WhatsApp отключён (код ${statusCode}). isLoggedOut: ${isLoggedOut}`,
         );
 
-        if (shouldReconnect) {
-          setTimeout(() => this.connect(), 5000);
+        if (isLoggedOut) {
+          // Удаляем старую сессию чтобы получить новый QR
+          const authFolder = path.resolve(process.cwd(), 'whatsapp-session');
+          try {
+            fs.rmSync(authFolder, { recursive: true, force: true });
+            this.logger.warn('Сессия удалена — переподключение для нового QR');
+          } catch (e) {
+            this.logger.error(`Ошибка удаления сессии: ${e}`);
+          }
         }
+
+        // Переподключаемся всегда
+        setTimeout(() => this.connect(), 5000);
       }
     });
 
