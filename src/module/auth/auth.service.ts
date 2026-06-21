@@ -93,7 +93,7 @@ export class AuthService {
         }
       }
 
-      const user = await this.userService.createUser(userData, refId);
+      const { user } = await this.userService.createUser(userData, refId);
       this.logger.debug(
         `[SUCCESS] User registered with phoneNumber: ${JSON.stringify(userData.phoneNumber)}`,
         refId,
@@ -212,12 +212,15 @@ export class AuthService {
         HttpStatus.NOT_FOUND,
       );
     }
-    await this.userService.updateSmsCodeAndSend(phoneNumber, refId);
+    const smsCode = await this.userService.updateSmsCodeAndSend(
+      phoneNumber,
+      refId,
+    );
     this.logger.debug(
       `[SUCCESS] requestCode: code sent to ${phoneNumber}`,
       refId,
     );
-    return { message: 'Код подтверждения отправлен на WhatsApp' };
+    return { message: 'Код подтверждения отправлен на WhatsApp', smsCode };
   }
 
   async switchRole(userId: number, dto: SwitchRoleDto, refId: string) {

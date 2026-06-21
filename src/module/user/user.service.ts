@@ -237,7 +237,7 @@ export class UserService {
         `[SUCCESS] Creating user with phoneNumber: ${JSON.stringify(userData.phoneNumber)}`,
         refId,
       );
-      return savedUser;
+      return { user: savedUser, smsCode };
     } catch (error) {
       this.logger.error(
         `[ERROR] Creating user with phoneNumber: ${JSON.stringify(error)}`,
@@ -329,7 +329,9 @@ export class UserService {
     // Rate-limit: не чаще 1 раза в 60 секунд
     const lastSent = smsRateLimit.get(phoneNumber);
     if (lastSent && Date.now() - lastSent.getTime() < 60_000) {
-      const secLeft = Math.ceil((60_000 - (Date.now() - lastSent.getTime())) / 1000);
+      const secLeft = Math.ceil(
+        (60_000 - (Date.now() - lastSent.getTime())) / 1000,
+      );
       throw new HttpException(
         `Подождите ${secLeft} сек. перед повторной отправкой`,
         HttpStatus.TOO_MANY_REQUESTS,
